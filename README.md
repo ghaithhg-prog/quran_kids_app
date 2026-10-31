@@ -80,6 +80,22 @@ flutter build apk --release
 
 ---
 
-## 👨‍💻 المطور (Author)
-* **GitHub:** [@ghaithhg-prog](https://github.com/ghaithhg-prog)
-* **Project Repository:** [quran_kids_app](https://github.com/ghaithhg-prog/quran_kids_app)
+## 🎁 مجاني 100% وبدون إعلانات (100% Free & Ad-Free)
+* هذا التطبيق **مجاني 100% لوجه الله تعالى**، خالي تماماً من أي إعلانات أو عمليات شراء أو اشتراكات.
+* صُمم خالصاً لخدمة كتاب الله الكريم وتعليم وتربية أطفالنا على تلاوة وحفظ القرآن الكريم بإتقان وسهولة.
+
+---
+
+## 👨‍💻 فريق التطوير (Developers)
+
+* **محمد غيث قيراط** (**Mohamed Ghaith Guirat**) - المطور الرئيسي للبرنامج (Lead Developer)
+  * فيسبوك (Facebook): [facebook.com/ghaithg](https://www.facebook.com/ghaithg)
+  * جيت هاب (GitHub): [@ghaithhg-prog](https://github.com/ghaithhg-prog)
+
+* **أنس بن خليل** (**Ons Ben Khalil**) - مطور ومشارك في إعداد المشروع (Co-Developer)
+  * فيسبوك (Facebook): [facebook.com/ons.khalil14](https://www.facebook.com/ons.khalil14)
+
+---
+
+## 📄 مستودع المشروع (Project Repository)
+* [GitHub: ghaithhg-prog/quran_kids_app](https://github.com/ghaithhg-prog/quran_kids_app)

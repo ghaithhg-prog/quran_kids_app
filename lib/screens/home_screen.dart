@@ -5,6 +5,7 @@ import '../models/surah.dart';
 import '../services/progress_service.dart';
 import 'memorize_screen.dart';
 import 'live_test_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -118,6 +119,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildBullet('👑 تاج الوقار - حافظ القرآن:', 'إذا أتممت ختم القرآن كاملاً بـ 100% في جميع السور الـ 114، تحصل على شارة ولقب: «حافظ القرآن الكريم مبارك!» 👑🏆.'),
                     ],
                   ),
+                  const SizedBox(height: 12),
+
+                  // Section 4: 100% Free & No Ads
+                  _buildGuideSection(
+                    icon: '🎁',
+                    title: 'تطبيق مجاني 100% وبدون أي إعلانات',
+                    color: const Color(0xFFE8F5E9),
+                    borderColor: const Color(0xFF81C784),
+                    children: [
+                      _buildBullet('لوجه الله تعالى:', 'هذا التطبيق مجاني بالكامل 100%، خالي تماماً من أي إعلانات أو مبيعات أو اشتراكات نهائياً.'),
+                      _buildBullet('الغاية والهدف:', 'صُمم خصيصاً لخدمة كتاب الله الكريم وتعليم أطفالنا وتربيتهم على تلاوة وحفظ القرآن الكريم بإتقان وسهولة.'),
+                      _buildBullet('فريق التطوير:', 'تم تطوير التطبيق بواسطة: محمد غيث قيراط (Mohamed Ghaith Guirat) و أنس بن خليل (Ons Ben Khalil).'),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -191,6 +206,175 @@ class _HomeScreenState extends State<HomeScreen> {
                   TextSpan(text: text),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchUrlSafe(String urlString) async {
+    try {
+      final uri = Uri.parse(urlString);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تعذر فتح الرابط: $urlString', style: GoogleFonts.cairo())),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching url: $e');
+    }
+  }
+
+  void _showDevelopersDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+          contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.people_alt, color: Color(0xFF00897B), size: 26),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'فريق مطوري التطبيق 🌟',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 17),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'صُنع هذا التطبيق بحب وإخلاص لوجه الله تعالى لتعليم وتحفيظ أطفالنا كتاب الله الكريم.',
+                  style: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                const SizedBox(height: 14),
+                _buildDevCard(
+                  nameAr: 'محمد غيث قيراط',
+                  nameFr: 'Mohamed Ghaith Guirat',
+                  role: 'المطور الرئيسي للبرنامج (Lead Developer)',
+                  facebookUrl: 'https://www.facebook.com/ghaithg',
+                  iconColor: const Color(0xFF00897B),
+                ),
+                const SizedBox(height: 10),
+                _buildDevCard(
+                  nameAr: 'أنس بن خليل',
+                  nameFr: 'Ons Ben Khalil',
+                  role: 'مطور ومشارك في المشروع (Co-Developer)',
+                  facebookUrl: 'https://www.facebook.com/ons.khalil14',
+                  iconColor: const Color(0xFFE65100),
+                ),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFA5D6A7)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.volunteer_activism, color: Color(0xFF2E7D32), size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'هذا التطبيق مجاني 100% لوجه الله، لا يحتوي على إعلانات أو أي مبيعات نهائياً 🤍',
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF1B5E20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00897B),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              ),
+              child: Text('إغلاق', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDevCard({
+    required String nameAr,
+    required String nameFr,
+    required String role,
+    required String facebookUrl,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: iconColor.withValues(alpha: 0.15),
+            child: Icon(Icons.person, color: iconColor, size: 22),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nameAr,
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                Text(
+                  nameFr,
+                  style: GoogleFonts.cairo(fontSize: 11, color: Colors.grey.shade700, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  role,
+                  style: GoogleFonts.cairo(fontSize: 9.5, color: iconColor, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => _launchUrlSafe(facebookUrl),
+            icon: const Icon(Icons.open_in_new, size: 14),
+            label: Text('فيسبوك', style: GoogleFonts.cairo(fontSize: 11, fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1877F2),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              elevation: 0,
             ),
           ),
         ],
@@ -430,6 +614,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           centerTitle: true,
           actions: [
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              tooltip: 'فريق مطوري التطبيق',
+              onPressed: _showDevelopersDialog,
+            ),
             IconButton(
               icon: const Icon(Icons.help_outline),
               tooltip: 'دليل التطبيق ونظام الحفظ والجوائز',
@@ -963,6 +1152,91 @@ class _HomeScreenState extends State<HomeScreen> {
                         );
                       },
                     ),
+            ),
+
+            // Bottom Footer Card: Developers Credit & 100% Free Notice
+            InkWell(
+              onTap: _showDevelopersDialog,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    top: BorderSide(color: Colors.grey.shade300, width: 1),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.people_alt, size: 16, color: Color(0xFF00897B)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'تطوير: محمد غيث قيراط & أنس بن خليل • مجاني 100% بدون إعلانات',
+                            style: GoogleFonts.cairo(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF263238),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'Mohamed Ghaith Guirat & Ons Ben Khalil • اضغط للتواصل',
+                            style: GoogleFonts.cairo(
+                              fontSize: 9.5,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'المطورون',
+                            style: GoogleFonts.cairo(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF00897B),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(Icons.arrow_forward_ios, size: 9, color: Color(0xFF00897B)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

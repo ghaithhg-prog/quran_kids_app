@@ -139,16 +139,35 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     final currentAyahNumber = _allWords[_currentWordIndex].ayahNumber;
     if (currentAyahNumber != _lastScrolledAyahNumber) {
       _lastScrolledAyahNumber = currentAyahNumber;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         if (!mounted) return;
         final keyContext = _liveAyahKeys[currentAyahNumber]?.currentContext;
         if (keyContext != null) {
           Scrollable.ensureVisible(
             keyContext,
-            duration: const Duration(milliseconds: 600),
+            duration: const Duration(milliseconds: 500),
             curve: Curves.easeInOutCubic,
-            alignment: 0.35,
+            alignment: 0.5,
           );
+        } else if (_scrollController.hasClients) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          final total = _ayahs.isEmpty ? 1 : _ayahs.length;
+          final targetOffset = (((currentAyahNumber - 1) / total) * maxScroll).clamp(0.0, maxScroll);
+          await _scrollController.animateTo(
+            targetOffset,
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+          );
+          if (!mounted) return;
+          final lateCtx = _liveAyahKeys[currentAyahNumber]?.currentContext;
+          if (lateCtx != null && lateCtx.mounted) {
+            Scrollable.ensureVisible(
+              lateCtx,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              alignment: 0.5,
+            );
+          }
         }
       });
     }

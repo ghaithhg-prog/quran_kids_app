@@ -115,23 +115,34 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
 
   void _scrollToActiveAyah(int index) {
     if (!mounted || index < 0 || index >= _ayahs.length) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       final keyContext = _ayahKeys[index]?.currentContext;
       if (keyContext != null) {
         Scrollable.ensureVisible(
           keyContext,
-          duration: const Duration(milliseconds: 600),
+          duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOutCubic,
-          alignment: 0.35,
+          alignment: 0.5,
         );
       } else if (_scrollController.hasClients) {
-        final targetOffset = (index * 160.0).clamp(0.0, _scrollController.position.maxScrollExtent);
-        _scrollController.animateTo(
+        final maxScroll = _scrollController.position.maxScrollExtent;
+        final targetOffset = (_ayahs.isEmpty ? 0.0 : (index / _ayahs.length) * maxScroll).clamp(0.0, maxScroll);
+        await _scrollController.animateTo(
           targetOffset,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOutCubic,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
         );
+        if (!mounted) return;
+        final lateCtx = _ayahKeys[index]?.currentContext;
+        if (lateCtx != null && lateCtx.mounted) {
+          Scrollable.ensureVisible(
+            lateCtx,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: 0.5,
+          );
+        }
       }
     });
   }

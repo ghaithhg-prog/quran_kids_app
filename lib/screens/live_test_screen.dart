@@ -182,11 +182,11 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     _hesitationTimer?.cancel();
     if (_currentWordIndex >= _allWords.length) return;
 
-    _hesitationTimer = Timer(const Duration(seconds: 5), () {
+    _hesitationTimer = Timer(const Duration(seconds: 4), () {
       if (!mounted || !_isListening || _currentWordIndex >= _allWords.length) return;
       final nextWord = _allWords[_currentWordIndex];
       setState(() {
-        _hintMessage = 'توقفت أكثر من 4 ثوانٍ! الكلمة التالية هي: « ${nextWord.text} »';
+        _hintMessage = '⏳ توقفت أكثر من 4 ثوانٍ! الكلمة التالية هي: « ${nextWord.text} »';
       });
     });
   }
@@ -220,7 +220,8 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       listenOptions: stt.SpeechListenOptions(
         localeId: localeId,
         partialResults: true,
-        listenMode: stt.ListenMode.dictation,
+        listenMode: stt.ListenMode.confirmation,
+        cancelOnError: false,
       ),
       onResult: (result) {
         _processSpokenText(result.recognizedWords);
@@ -230,7 +231,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
   void _restartListening() async {
     if (!_isListening || _currentWordIndex >= _allWords.length) return;
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 100));
     if (mounted && _isListening) {
       _startListening();
     }
@@ -245,39 +246,48 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   void _processSpokenText(String recognized) {
     if (_currentWordIndex >= _allWords.length) return;
 
-    final spokenTokens = recognized
+    final rawTokens = recognized
         .split(RegExp(r'\s+'))
-        .map((w) => Ayah.normalizeArabic(w))
         .where((w) => w.isNotEmpty)
         .toList();
 
-    if (spokenTokens.isEmpty) return;
+    if (rawTokens.isEmpty) return;
 
-    bool advanced = false;
-    int tokenIdx = 0;
-    while (tokenIdx < spokenTokens.length && _currentWordIndex < _allWords.length) {
-      final target = _allWords[_currentWordIndex].text;
-      final consumed = QuranPhonetics.matchWord(target, spokenTokens, tokenIdx);
+    final normTokens = rawTokens.map((w) => Ayah.normalizeArabic(w)).toList();
+
+    for (int i = 0; i < rawTokens.length; i++) {
+      if (_currentWordIndex >= _allWords.length) break;
+
+      final normToken = normTokens[i];
+      if (normToken.isEmpty) continue;
+
+      final target = _allWords[_currentWordIndex];
+      final consumed = QuranPhonetics.matchWord(target.text, normTokens, i);
 
       if (consumed > 0) {
+        // Immediate match upon speaking the correct word!
         setState(() {
-          _allWords[_currentWordIndex].isRevealed = true;
+          target.isRevealed = true;
           _currentWordIndex++;
           _hintMessage = null;
           _errorMessage = null;
         });
-        tokenIdx += consumed;
-        advanced = true;
-      } else {
-        tokenIdx++;
-      }
-    }
+        _resetHesitationTimer();
+        i += (consumed - 1);
 
-    if (advanced) {
-      _resetHesitationTimer();
-      // Check if finished entire surah!
-      if (_currentWordIndex >= _allWords.length) {
-        _onTestSuccess();
+        if (_currentWordIndex >= _allWords.length) {
+          _onTestSuccess();
+          return;
+        }
+      } else {
+        // Immediate error if the latest spoken word did not match target
+        if (i == rawTokens.length - 1 && normToken.length >= 2) {
+          setState(() {
+            _errorMessage = '❌ خطأ: نطقتَ « ${rawTokens[i]} » والصواب: « ${target.text} »';
+            _hintMessage = null;
+          });
+          _resetHesitationTimer();
+        }
       }
     }
   }

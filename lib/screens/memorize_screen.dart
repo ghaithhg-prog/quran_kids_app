@@ -36,6 +36,9 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
   bool _isLoadingAyahs = true;
   List<Ayah> _ayahs = [];
 
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _ayahKeys = {};
+
   // Set of masked word keys per ayah: "ayahIndex-wordIndex"
   final Set<String> _maskedWordsKeys = {};
   // Set of words revealed by tapping
@@ -104,9 +107,33 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _audioPlayer.dispose();
     _speech.stop();
     super.dispose();
+  }
+
+  void _scrollToActiveAyah(int index) {
+    if (!mounted || index < 0 || index >= _ayahs.length) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final keyContext = _ayahKeys[index]?.currentContext;
+      if (keyContext != null) {
+        Scrollable.ensureVisible(
+          keyContext,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+          alignment: 0.35,
+        );
+      } else if (_scrollController.hasClients) {
+        final targetOffset = (index * 160.0).clamp(0.0, _scrollController.position.maxScrollExtent);
+        _scrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOutCubic,
+        );
+      }
+    });
   }
 
   // Generates randomized masked words per ayah according to round level
@@ -150,6 +177,8 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
       _currentPlayingAyahIndex = index;
       _isPlaying = true;
     });
+
+    _scrollToActiveAyah(index);
 
     final ayah = _ayahs[index];
     final url = ayah.getAudioUrl(widget.surah.number, reciter: _selectedReciter);
@@ -196,6 +225,8 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
       _speechFeedback = null;
       _speechSuccess = false;
     });
+
+    _scrollToActiveAyah(ayahIndex);
 
     // Try Arabic locale if available
     final locales = await _speech.locales();
@@ -692,6 +723,7 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
                   // Ayahs List
                   Expanded(
                     child: ListView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.all(14),
                       itemCount: _ayahs.length,
                       itemBuilder: (context, ayahIndex) {
@@ -700,6 +732,7 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
                         final isListeningToThis = _isListening && _listeningAyahIndex == ayahIndex;
 
                         return Card(
+                          key: _ayahKeys.putIfAbsent(ayahIndex, () => GlobalKey()),
                           margin: const EdgeInsets.only(bottom: 12),
                           elevation: isCurrentlyPlaying ? 3 : 1,
                           shape: RoundedRectangleBorder(

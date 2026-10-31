@@ -51,6 +51,10 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   int _correctedCount = 0;
   String _speechLocaleId = 'ar-SA';
 
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _liveAyahKeys = {};
+  int _lastScrolledAyahNumber = -1;
+
   Timer? _hesitationTimer;
   String? _hintMessage;
   String? _errorMessage;
@@ -123,10 +127,31 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _hesitationTimer?.cancel();
     _speech.stop();
     _audioPlayer.dispose();
     super.dispose();
+  }
+
+  void _scrollToCurrentWordAyah() {
+    if (_currentWordIndex >= _allWords.length || !mounted) return;
+    final currentAyahNumber = _allWords[_currentWordIndex].ayahNumber;
+    if (currentAyahNumber != _lastScrolledAyahNumber) {
+      _lastScrolledAyahNumber = currentAyahNumber;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final keyContext = _liveAyahKeys[currentAyahNumber]?.currentContext;
+        if (keyContext != null) {
+          Scrollable.ensureVisible(
+            keyContext,
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+            alignment: 0.35,
+          );
+        }
+      });
+    }
   }
 
   void _showStartPrompt() {
@@ -225,6 +250,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     });
 
     _resetHesitationTimer();
+    _scrollToCurrentWordAyah();
 
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
@@ -299,6 +325,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
         });
         _lastMatchedTokenIndex = i + (consumed - 1);
         _resetHesitationTimer();
+        _scrollToCurrentWordAyah();
         i += (consumed - 1);
 
         if (_currentWordIndex >= _allWords.length) {
@@ -488,6 +515,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
   void _restartTest() {
     _stopListening();
+    _lastScrolledAyahNumber = -1;
     setState(() {
       _currentWordIndex = 0;
       _lastMatchedTokenIndex = -1;
@@ -500,6 +528,9 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       _hintMessage = null;
       _errorMessage = null;
     });
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(0.0, duration: const Duration(milliseconds: 400), curve: Curves.easeOut);
+    }
     _startListening();
     _showSnack('تمت إعادة الاختبار من البداية. رتّل الآن بصوتك!');
   }
@@ -752,6 +783,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
                         border: Border.all(color: Colors.grey.shade200),
                       ),
                       child: SingleChildScrollView(
+                        controller: _scrollController,
                         child: Column(
                           children: [
                             Text(
@@ -771,6 +803,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
                                   .toList();
 
                               return Padding(
+                                key: _liveAyahKeys.putIfAbsent(ayah.number, () => GlobalKey()),
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: Wrap(
                                   alignment: WrapAlignment.center,

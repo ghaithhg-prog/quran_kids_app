@@ -1,0 +1,705 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../data/quran_data.dart';
+import '../models/surah.dart';
+import '../services/progress_service.dart';
+import 'memorize_screen.dart';
+import 'live_test_screen.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  String _searchQuery = '';
+  int _selectedFilterIndex = 0; // 0: All 114, 1: Juz Amma (78-114), 2: Saved (stars > 0)
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    await ProgressService.init();
+    if (mounted) setState(() {});
+  }
+
+  List<Surah> get _filteredSurahs {
+    List<Surah> list = QuranData.allSurahs;
+
+    if (_selectedFilterIndex == 1) {
+      list = list.where((s) => s.number >= 78 && s.number <= 114).toList();
+    } else if (_selectedFilterIndex == 2) {
+      list = list.where((s) => ProgressService.getStars(s.number) == 3).toList();
+    }
+
+    if (_searchQuery.trim().isNotEmpty) {
+      final q = _searchQuery.trim();
+      list = list.where((s) {
+        final normName = Ayah.normalizeArabic(s.name);
+        final normQ = Ayah.normalizeArabic(q);
+        return normName.contains(normQ) || s.number.toString() == q;
+      }).toList();
+    }
+
+    return list;
+  }
+
+  void _openDirectTestPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.mic, color: Color(0xFF00897B), size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    'اختر السورة لبدء اختبار التسميع المباشر 🎙️',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'رتّل من حفظك وسيقوم التطبيق بالاستماع إليك وإظهار الكلمات الصحيحة ومساعدتك إذا توقفت!',
+                style: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade700),
+              ),
+              const Divider(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: QuranData.allSurahs.length,
+                  itemBuilder: (context, idx) {
+                    final surah = QuranData.allSurahs[idx];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFF00897B).withValues(alpha: 0.1),
+                        child: Text(
+                          '${surah.number}',
+                          style: GoogleFonts.cairo(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: const Color(0xFF00897B),
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        'سورة ${surah.name}',
+                        style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      subtitle: Text('${surah.revelationType} • ${surah.totalAyahs} آيات', style: GoogleFonts.cairo(fontSize: 11)),
+                      trailing: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => LiveTestScreen(surah: surah),
+                            ),
+                          ).then((_) => _loadProgress());
+                        },
+                        icon: const Icon(Icons.mic, size: 16),
+                        label: Text('اختبرني', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00897B),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openMemorizePicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.menu_book, color: Color(0xFFE65100), size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    'اختر السورة لبدء رحلة الحفظ التدريجي 📖',
+                    style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'مراحل الحفظ: تكرار 3 مرات، إخفاء عشوائي متدرج، ثم الاختبار التسميعي النهائي!',
+                style: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade700),
+              ),
+              const Divider(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: QuranData.allSurahs.length,
+                  itemBuilder: (context, idx) {
+                    final surah = QuranData.allSurahs[idx];
+                    final savedRound = ProgressService.getSavedRound(surah.number);
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: const Color(0xFFFFA000).withValues(alpha: 0.15),
+                        child: Text(
+                          '${surah.number}',
+                          style: GoogleFonts.cairo(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: const Color(0xFFE65100),
+                          ),
+                        ),
+                      ),
+                      title: Text(
+                        'سورة ${surah.name}',
+                        style: GoogleFonts.amiri(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      subtitle: Text(
+                        '${surah.revelationType} • ${surah.totalAyahs} آيات ${savedRound > 1 ? '• مرحلة $savedRound' : ''}',
+                        style: GoogleFonts.cairo(fontSize: 11),
+                      ),
+                      trailing: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => MemorizeScreen(surah: surah),
+                            ),
+                          ).then((_) => _loadProgress());
+                        },
+                        icon: const Icon(Icons.play_arrow, size: 16),
+                        label: Text('ابدأ الحفظ', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFA000),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final completedCount = ProgressService.getCompletedSurahsCount();
+    final totalStars = ProgressService.getTotalStars();
+    final progressPercent = (completedCount / 114.0).clamp(0.0, 1.0);
+
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF4F6F8),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF00897B),
+          foregroundColor: Colors.white,
+          elevation: 0,
+          title: Text(
+            'تعليم وحفظ القرآن الكريم 📖',
+            style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 20),
+          ),
+          centerTitle: true,
+        ),
+        body: Column(
+          children: [
+            // Top Dashboard: Learning Level & Memorization Statistics
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF00897B),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(22),
+                  bottomRight: Radius.circular(22),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'مستوى الحفظ والتقدم القرآني',
+                        style: GoogleFonts.cairo(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        '${(progressPercent * 100).toStringAsFixed(1)}%',
+                        style: GoogleFonts.cairo(
+                          color: const Color(0xFFFFD54F),
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  LinearProgressIndicator(
+                    value: progressPercent,
+                    backgroundColor: Colors.white24,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD54F)),
+                    minHeight: 7,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  const SizedBox(height: 8),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatBadge(
+                          icon: Icons.check_circle_outline,
+                          title: 'السور المتقنة',
+                          value: '$completedCount / 114',
+                          color: const Color(0xFFE8F5E9),
+                          textColor: const Color(0xFF2E7D32),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildStatBadge(
+                          icon: Icons.star,
+                          title: 'مجموع النجوم',
+                          value: '$totalStars ⭐',
+                          color: const Color(0xFFFFF8E1),
+                          textColor: const Color(0xFFF57F17),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // The Two Main Modes: Direct Test vs Progressive Learning
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
+              child: Row(
+                children: [
+                  // Mode 1: Direct Live Test
+                  Expanded(
+                    child: InkWell(
+                      onTap: _openDirectTestPicker,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF00796B), Color(0xFF004D40)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF004D40).withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.mic, color: Color(0xFFFFD54F), size: 28),
+                            const SizedBox(height: 4),
+                            Text(
+                              'اختبار التسميع المباشر',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.cairo(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'اختبر حفظك فوراً بالمايكروفون',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.cairo(
+                                color: Colors.white70,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // Mode 2: Progressive Memorization
+                  Expanded(
+                    child: InkWell(
+                      onTap: _openMemorizePicker,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFFFA000), Color(0xFFE65100)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFE65100).withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            const Icon(Icons.menu_book, color: Colors.white, size: 28),
+                            const SizedBox(height: 4),
+                            Text(
+                              'رحلة مراحل الحفظ',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.cairo(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'تكرار وإخفاء تدريجي',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.cairo(
+                                color: Colors.white70,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Search Bar & Filter Chips
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+              child: Column(
+                children: [
+                  TextField(
+                    onChanged: (val) => setState(() => _searchQuery = val),
+                    decoration: InputDecoration(
+                      hintText: 'ابحث باسم السورة أو رقمها...',
+                      hintStyle: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade500),
+                      prefixIcon: const Icon(Icons.search, color: Color(0xFF00897B), size: 20),
+                      filled: true,
+                      fillColor: Colors.white,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade200),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+
+                  Row(
+                    children: [
+                      _buildFilterChip(0, 'كل السور (114)'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip(1, 'جزء عمّ (37)'),
+                      const SizedBox(width: 6),
+                      _buildFilterChip(2, 'المحفوظة ⭐'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // Surahs List with Dual Action Buttons (احفظ / اختبرني)
+            Expanded(
+              child: _filteredSurahs.isEmpty
+                  ? Center(
+                      child: Text(
+                        'لا توجد سور مطابقة للبحث',
+                        style: GoogleFonts.cairo(fontSize: 14, color: Colors.grey),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(14, 2, 14, 14),
+                      itemCount: _filteredSurahs.length,
+                      itemBuilder: (context, index) {
+                        final surah = _filteredSurahs[index];
+                        final stars = ProgressService.getStars(surah.number);
+                        final savedRound = ProgressService.getSavedRound(surah.number);
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.03),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: stars == 3 ? Colors.amber.shade300 : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              // Number Badge
+                              Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${surah.number}',
+                                    style: GoogleFonts.cairo(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: const Color(0xFF00897B),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+
+                              // Surah Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'سورة ${surah.name}',
+                                          style: GoogleFonts.amiri(
+                                            fontSize: 19,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xFF263238),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: List.generate(3, (starIdx) {
+                                            return Icon(
+                                              Icons.star,
+                                              size: 14,
+                                              color: starIdx < stars ? const Color(0xFFFFB300) : Colors.grey.shade300,
+                                            );
+                                          }),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      '${surah.revelationType} • ${surah.totalAyahs} آيات ${savedRound > 1 ? '• مرحلة $savedRound' : ''}',
+                                      style: GoogleFonts.cairo(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Action 1: Memorize Button
+                              OutlinedButton(
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MemorizeScreen(surah: surah),
+                                    ),
+                                  );
+                                  _loadProgress();
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFFFFA000)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: Text(
+                                  'احفظ',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFE65100),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+
+                              // Action 2: Direct Live Test Button
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => LiveTestScreen(surah: surah),
+                                    ),
+                                  );
+                                  _loadProgress();
+                                },
+                                icon: const Icon(Icons.mic, size: 14),
+                                label: Text(
+                                  'اختبرني',
+                                  style: GoogleFonts.cairo(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF00897B),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(int index, String label) {
+    final isSelected = _selectedFilterIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedFilterIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF00897B) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? const Color(0xFF00897B) : Colors.grey.shade300,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.cairo(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatBadge({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    required Color textColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: textColor, size: 18),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: GoogleFonts.cairo(fontSize: 10, color: Colors.grey.shade700)),
+              Text(
+                value,
+                style: GoogleFonts.cairo(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

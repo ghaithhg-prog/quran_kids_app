@@ -15,6 +15,7 @@ class TestWord {
   final String text;
   final String normalized;
   bool isRevealed;
+  bool neededCorrection;
 
   TestWord({
     required this.ayahNumber,
@@ -22,6 +23,7 @@ class TestWord {
     required this.text,
     required this.normalized,
     this.isRevealed = false,
+    this.neededCorrection = false,
   });
 }
 
@@ -45,6 +47,9 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   final List<TestWord> _allWords = [];
   int _currentWordIndex = 0;
   int _lastMatchedTokenIndex = -1;
+  int _directCorrectCount = 0;
+  int _correctedCount = 0;
+  String _speechLocaleId = 'ar-SA';
 
   Timer? _hesitationTimer;
   String? _hintMessage;
@@ -76,6 +81,13 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
           }
         },
       );
+      if (_speechEnabled) {
+        final locales = await _speech.locales();
+        final hasArabic = locales.any((l) => l.localeId.startsWith('ar'));
+        if (hasArabic) {
+          _speechLocaleId = locales.firstWhere((l) => l.localeId.startsWith('ar')).localeId;
+        }
+      }
     } catch (e) {
       _speechEnabled = false;
     }
@@ -140,13 +152,15 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
                 'مرحباً بك في اختبار سورة ${widget.surah.name}!\n',
                 style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 15),
               ),
-              _buildRuleRow('🎯', 'رتّل السورة من حفظك بصوت واضح في المايكروفون.'),
+              _buildRuleRow('🎯', 'رتّل السورة من حفظك بصوت واضح في المايكروفون دون النظر للمصحف.'),
               const SizedBox(height: 8),
-              _buildRuleRow('✨', 'كل كلمة تنطقها صحيحة ستظهر مباشرة على الشاشة!'),
+              _buildRuleRow('✨', 'كل كلمة تنطقها صحيحة ستظهر مباشرة على الشاشة باللون الأخضر!'),
               const SizedBox(height: 8),
-              _buildRuleRow('⏳', 'إذا توقفت لأكثر من 4 ثوانٍ، سيساعدك التطبيق بالكلمة التالية.'),
+              _buildRuleRow('💡', 'إذا أخطأت في كلمة ننبهك فوراً، وإذا توقفت 4 ثوانٍ نساعدك بنطق الكلمة التالية.'),
               const SizedBox(height: 8),
-              _buildRuleRow('🏆', 'شرط النجاح: قراءة السورة كاملة صحيحة 100%!'),
+              _buildRuleRow('🏆', 'شرط النجاح: تحقيق نسبة 90% فأكثر من الكلمات صحيحة مباشرة.'),
+              const SizedBox(height: 8),
+              _buildRuleRow('🌟', 'جائزة التميز الذهبية 🏆: عند قراءة السورة بنسبة 100% دون أي خطأ!'),
             ],
           ),
           actions: [
@@ -186,6 +200,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     _hesitationTimer = Timer(const Duration(seconds: 4), () {
       if (!mounted || !_isListening || _currentWordIndex >= _allWords.length) return;
       final nextWord = _allWords[_currentWordIndex];
+      nextWord.neededCorrection = true; // Mark that assistance was given
       setState(() {
         _errorMessage = null;
         _hintMessage = '⏳ توقفت أكثر من 4 ثوانٍ! الكلمة التالية هي: « ${nextWord.text} »';
@@ -211,16 +226,9 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
     _resetHesitationTimer();
 
-    final locales = await _speech.locales();
-    String localeId = 'ar-SA';
-    final hasArabic = locales.any((l) => l.localeId.startsWith('ar'));
-    if (hasArabic) {
-      localeId = locales.firstWhere((l) => l.localeId.startsWith('ar')).localeId;
-    }
-
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
-        localeId: localeId,
+        localeId: _speechLocaleId,
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
         pauseFor: const Duration(seconds: 30),
@@ -279,6 +287,11 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       if (consumed > 0) {
         // Correct word pronounced! Immediate acceptance and advance
         setState(() {
+          if (!target.neededCorrection) {
+            _directCorrectCount++;
+          } else {
+            _correctedCount++;
+          }
           target.isRevealed = true;
           _currentWordIndex++;
           _hintMessage = null;
@@ -293,23 +306,37 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
           return;
         }
       } else {
-        // Child said a wrong word
+        // Child said a wrong word - only flag if NOT currently articulating a prefix!
         if (i == rawTokens.length - 1 && normToken.length >= 2) {
-          setState(() {
-            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens[i]} »';
-            _hintMessage = null;
-          });
-          _resetHesitationTimer();
+          final isPrefix = QuranPhonetics.isPrefixOfWord(target.text, normToken);
+          if (!isPrefix) {
+            target.neededCorrection = true;
+            setState(() {
+              _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens[i]} »';
+              _hintMessage = null;
+            });
+            _resetHesitationTimer();
+          }
         }
       }
     }
   }
 
-
-
-  void _onTestSuccess() {
+  void _onTestSuccess() async {
     _stopListening();
-    ProgressService.saveProgress(widget.surah.number, stars: 3, round: 7);
+    final totalWords = _allWords.length;
+    final int score = totalWords > 0 ? ((_directCorrectCount / totalWords) * 100).round() : 100;
+    final bool isPassed = score >= 90;
+    final bool isPerfect = score == 100;
+
+    await ProgressService.saveTestResult(
+      widget.surah.number,
+      score: score,
+      directCount: _directCorrectCount,
+      correctedCount: _correctedCount,
+    );
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
@@ -320,37 +347,103 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Column(
             children: [
-              const Text('🏆 🌟 🌟 🌟 🏆', style: TextStyle(fontSize: 34)),
-              const SizedBox(height: 8),
               Text(
-                'نجحت في الاختبار بجدارة!',
+                isPerfect
+                    ? '🏆 🌟 🌟 🌟 🏆'
+                    : isPassed
+                        ? '🌟 ⭐ 🌟'
+                        : score >= 60
+                            ? '👏 📈'
+                            : '📖 🔄',
+                style: const TextStyle(fontSize: 32),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                isPerfect
+                    ? 'حافظ متقن بامتياز! 100%'
+                    : isPassed
+                        ? 'مبارك! نجحت في الاختبار ($score%)'
+                        : score >= 60
+                            ? 'أداء جيد ومحاولة ممتازة! ($score%)'
+                            : 'للأسف لم تنجح، أعد المحاولة! ($score%)',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.cairo(
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF2E7D32),
+                  color: isPassed
+                      ? const Color(0xFF2E7D32)
+                      : score >= 60
+                          ? const Color(0xFFE65100)
+                          : Colors.red.shade700,
                 ),
               ),
             ],
           ),
-          content: Text(
-            'ما شاء الله تبارك الله!\nلقد رتّلت سورة ${widget.surah.name} كاملة صحيحة 100% عن ظهر قلب!\nتم منحك 3 نجوم ذهبية ⭐⭐⭐',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.cairo(fontSize: 15, height: 1.6),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isPerfect
+                    ? 'ما شاء الله تبارك الرحمن!\nلقد رتّلت سورة ${widget.surah.name} كاملة صحيحة 100% دون أي خطأ!\nتم منحك وسام وجائزة التميز الذهبية 🏆'
+                    : isPassed
+                        ? 'أحسنت يا بطل القرآن!\nتجاوزت شرط النجاح (90%) بجدارة في سورة ${widget.surah.name}!'
+                        : score >= 60
+                            ? 'أداء طيب في سورة ${widget.surah.name}، واقتربت من نسبة النجاح المطلوبة (90%). أعد الاختبار الآن لتفوز بالجائزة!'
+                            : 'لا تقلق يا بطل، الحفظ يحتاج إلى التكرار! ننصحك بالانتقال إلى «رحلة مراحل الحفظ» لتثبيت السورة ثم إعادة الاختبار.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.cairo(fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('كلمات صحيحة مباشرة:', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold, color: const Color(0xFF2E7D32))),
+                        Text('$_directCorrectCount من $totalWords', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: const Color(0xFF2E7D32))),
+                      ],
+                    ),
+                    const Divider(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('كلمات أصلحناها لك بلطف:', style: GoogleFonts.cairo(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.brown.shade700)),
+                        Text('$_correctedCount', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.brown.shade700)),
+                      ],
+                    ),
+                    const Divider(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('المعدل النهائي:', style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold)),
+                        Text(
+                          '$score%',
+                          style: GoogleFonts.cairo(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: isPassed ? const Color(0xFF2E7D32) : Colors.red.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           actionsAlignment: MainAxisAlignment.center,
           actions: [
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
-                setState(() {
-                  _currentWordIndex = 0;
-                  _lastMatchedTokenIndex = -1;
-                  for (var w in _allWords) {
-                    w.isRevealed = false;
-                  }
-                });
-                _startListening();
+                _restartTest();
               },
               icon: const Icon(Icons.refresh),
               label: Text('إعادة الاختبار', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
@@ -360,6 +453,20 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
+            if (!isPassed)
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pop(context, true);
+                },
+                icon: const Icon(Icons.menu_book),
+                label: Text('رحلة الحفظ', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE65100),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
@@ -368,7 +475,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
               icon: const Icon(Icons.check_circle),
               label: Text('تم، سورة أخرى', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E7D32),
+                backgroundColor: const Color(0xFF00897B),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -384,8 +491,11 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     setState(() {
       _currentWordIndex = 0;
       _lastMatchedTokenIndex = -1;
+      _directCorrectCount = 0;
+      _correctedCount = 0;
       for (var w in _allWords) {
         w.isRevealed = false;
+        w.neededCorrection = false;
       }
       _hintMessage = null;
       _errorMessage = null;
@@ -490,6 +600,52 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
                           valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD54F)),
                           minHeight: 8,
                           borderRadius: BorderRadius.circular(10),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle, color: Color(0xFF81C784), size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'صحيحة مباشرة: $_directCorrectCount',
+                                      style: GoogleFonts.cairo(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.lightbulb, color: Color(0xFFFFD54F), size: 14),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'أصلحناها لك: $_correctedCount',
+                                      style: GoogleFonts.cairo(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

@@ -25,7 +25,177 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadProgress() async {
     await ProgressService.init();
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+      if (!ProgressService.hasSeenGuide()) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _showAppGuideDialog();
+        });
+      }
+    }
+  }
+
+  void _showAppGuideDialog() {
+    ProgressService.markGuideSeen();
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+          contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.menu_book, color: Color(0xFF00897B), size: 28),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'دليل روضة القرآن الكريم 📖',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 17),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'مرحباً بك يا بطل القرآن! في هذا التطبيق تختار بين مسارين رئيسيين:\n',
+                    style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+
+                  // Section 1: Memorization
+                  _buildGuideSection(
+                    icon: '📖',
+                    title: 'المسار الأول: رحلة مراحل الحفظ (7 مراحل)',
+                    color: const Color(0xFFFFF3E0),
+                    borderColor: const Color(0xFFFFB74D),
+                    children: [
+                      _buildBullet('المراحل 1 - 3:', 'سماع وتكرار الآيات كاملة بصوت الشيخ لتثبيت النطق والحفظ.'),
+                      _buildBullet('المرحلة 4:', 'إخفاء كلمة واحدة عشوائية من كل آية لتنشيط الذاكرة.'),
+                      _buildBullet('المرحلة 5:', 'إخفاء 35% من كلمات السورة تدريجياً.'),
+                      _buildBullet('المرحلة 6:', 'إخفاء 65% من كلمات السورة (إخفاء معظم النص).'),
+                      _buildBullet('المرحلة 7:', 'إخفاء كامل للكلمات (100%) والترقية لاختبار التسميع الصوتي!'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Section 2: Live Test
+                  _buildGuideSection(
+                    icon: '🎙️',
+                    title: 'المسار الثاني: اختبار التسميع الصوتي المباشر',
+                    color: const Color(0xFFE0F2F1),
+                    borderColor: const Color(0xFF4DB6AC),
+                    children: [
+                      _buildBullet('تسميع غيباً:', 'رتّل السورة بصوتك دون نص مكتوب.'),
+                      _buildBullet('التقاط فوري:', 'كل كلمة تقولها صحيحة تظهر فوراً على الشاشة باللون الأخضر.'),
+                      _buildBullet('تصحيح لطيف:', 'إذا نطقت كلمة خاطئة ننبهك فوراً، وإذا توقفت 4 ثوانٍ نساعدك بنطق الكلمة التالية.'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Section 3: Scores & Prizes
+                  _buildGuideSection(
+                    icon: '🏆',
+                    title: 'نظام الدرجات، النجاح، وجائزة حافظ القرآن',
+                    color: const Color(0xFFFFFDE7),
+                    borderColor: const Color(0xFFFBC02D),
+                    children: [
+                      _buildBullet('شرط النجاح (90%+):', 'يجب تحقيق معدل 90% فأكثر من الكلمات صحيحة مباشرة لتعتبر ناجحاً في السورة.'),
+                      _buildBullet('جائزة التميز (100%):', 'عند قراءة السورة كاملة صحيحة 100% دون أي خطأ تحصل على وسام وجائزة التميز الذهبية 🏆 ⭐⭐⭐.'),
+                      _buildBullet('معدل أقل من 90%:', 'إذا حصلت على معدل متوسط أو لم تنجح، يشجعك التطبيق على إعادة المحاولة أو العودة لرحلة الحفظ لتثبيت السورة ثم إعادة الاختبار.'),
+                      _buildBullet('👑 تاج الوقار - حافظ القرآن:', 'إذا أتممت ختم القرآن كاملاً بـ 100% في جميع السور الـ 114، تحصل على شارة ولقب: «حافظ القرآن الكريم مبارك!» 👑🏆.'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00897B),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+              ),
+              child: Text('فهمت، لنبدأ الآن! 🚀', style: GoogleFonts.cairo(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuideSection({
+    required String icon,
+    required String title,
+    required Color color,
+    required Color borderColor,
+    required List<Widget> children,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.cairo(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBullet(String boldPrefix, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('• ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: GoogleFonts.cairo(fontSize: 11, color: Colors.black87, height: 1.4),
+                children: [
+                  TextSpan(text: '$boldPrefix ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  TextSpan(text: text),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Surah> get _filteredSurahs {
@@ -34,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_selectedFilterIndex == 1) {
       list = list.where((s) => s.number >= 78 && s.number <= 114).toList();
     } else if (_selectedFilterIndex == 2) {
-      list = list.where((s) => ProgressService.getStars(s.number) == 3).toList();
+      list = list.where((s) => ProgressService.getScore(s.number) >= 90 || ProgressService.getStars(s.number) >= 2).toList();
     }
 
     if (_searchQuery.trim().isNotEmpty) {
@@ -240,7 +410,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final completedCount = ProgressService.getCompletedSurahsCount();
+    final passedCount = ProgressService.getPassedSurahsCount();
+    final prizeCount = ProgressService.getPrizeCount();
     final totalStars = ProgressService.getTotalStars();
+    final isHafiz = ProgressService.isCompleteQuranHafiz();
     final progressPercent = (completedCount / 114.0).clamp(0.0, 1.0);
 
     return Directionality(
@@ -256,6 +429,13 @@ class _HomeScreenState extends State<HomeScreen> {
             style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 20),
           ),
           centerTitle: true,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: 'دليل التطبيق ونظام الحفظ والجوائز',
+              onPressed: _showAppGuideDialog,
+            ),
+          ],
         ),
         body: Column(
           children: [
@@ -272,6 +452,43 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Glorious Hafiz Banner (Shown if child memorized all 114 surahs with 100%)
+                  if (isHafiz)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFD700), Color(0xFFFFA000)],
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.amber.withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('👑 🏆', style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'مبارك! أنت حافظ لكتاب الله كاملاً بامتياز - تاج الوقار!',
+                              style: GoogleFonts.cairo(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: const Color(0xFF3E2723),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -308,20 +525,30 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: _buildStatBadge(
                           icon: Icons.check_circle_outline,
-                          title: 'السور المتقنة',
-                          value: '$completedCount / 114',
+                          title: 'الناجحة (90%+)',
+                          value: '$passedCount / 114',
                           color: const Color(0xFFE8F5E9),
                           textColor: const Color(0xFF2E7D32),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _buildStatBadge(
+                          icon: Icons.emoji_events,
+                          title: 'جوائز التميز 🏆',
+                          value: '$prizeCount',
+                          color: const Color(0xFFFFF8E1),
+                          textColor: const Color(0xFFF57F17),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: _buildStatBadge(
                           icon: Icons.star,
-                          title: 'مجموع النجوم',
-                          value: '$totalStars ⭐',
-                          color: const Color(0xFFFFF8E1),
-                          textColor: const Color(0xFFF57F17),
+                          title: 'النجوم ⭐',
+                          value: '$totalStars',
+                          color: const Color(0xFFE0F7FA),
+                          textColor: const Color(0xFF00838F),
                         ),
                       ),
                     ],
@@ -437,6 +664,40 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
+            // Explanatory Guide Banner
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 4),
+              child: InkWell(
+                onTap: _showAppGuideDialog,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2F1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF80CBC4)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.menu_book, color: Color(0xFF00796B), size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'دليل التطبيق: اضغط هنا لشرح مراحل الحفظ الـ 7 ونظام الاختبار والجوائز 🏆',
+                          style: GoogleFonts.cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF004D40),
+                          ),
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, color: Color(0xFF00796B), size: 12),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Search Bar & Filter Chips
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
@@ -470,7 +731,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(width: 6),
                       _buildFilterChip(1, 'جزء عمّ (37)'),
                       const SizedBox(width: 6),
-                      _buildFilterChip(2, 'المحفوظة ⭐'),
+                      _buildFilterChip(2, 'المتقنة (90%+) 🏆'),
                     ],
                   ),
                 ],
@@ -493,6 +754,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         final surah = _filteredSurahs[index];
                         final stars = ProgressService.getStars(surah.number);
                         final savedRound = ProgressService.getSavedRound(surah.number);
+                        final hasTested = ProgressService.hasTested(surah.number);
+                        final score = ProgressService.getScore(surah.number);
+                        final hasPrize = ProgressService.hasPrize(surah.number);
+                        final directCorrect = ProgressService.getDirectCorrect(surah.number);
+                        final correctedCount = ProgressService.getCorrectedCount(surah.number);
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -508,7 +774,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                             border: Border.all(
-                              color: stars == 3 ? Colors.amber.shade300 : Colors.grey.shade200,
+                              color: hasPrize
+                                  ? Colors.amber.shade400
+                                  : (score >= 90 ? Colors.green.shade300 : Colors.grey.shade200),
+                              width: hasPrize ? 1.5 : 1,
                             ),
                           ),
                           child: Row(
@@ -518,7 +787,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 width: 38,
                                 height: 38,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF00897B).withValues(alpha: 0.1),
+                                  color: hasPrize
+                                      ? Colors.amber.shade100
+                                      : const Color(0xFF00897B).withValues(alpha: 0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
@@ -527,7 +798,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     style: GoogleFonts.cairo(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13,
-                                      color: const Color(0xFF00897B),
+                                      color: hasPrize ? const Color(0xFFE65100) : const Color(0xFF00897B),
                                     ),
                                   ),
                                 ),
@@ -569,6 +840,67 @@ class _HomeScreenState extends State<HomeScreen> {
                                         color: Colors.grey.shade600,
                                       ),
                                     ),
+                                    const SizedBox(height: 3),
+                                    if (hasPrize)
+                                      Row(
+                                        children: [
+                                          const Text('🏆', style: TextStyle(fontSize: 12)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '100% متقن بامتياز (جائزة ذهبية)',
+                                            style: GoogleFonts.cairo(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFFE65100),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    else if (hasTested)
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: score >= 90
+                                                  ? const Color(0xFFE8F5E9)
+                                                  : score >= 60
+                                                      ? const Color(0xFFFFF3E0)
+                                                      : const Color(0xFFFFEBEE),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              score >= 90
+                                                  ? '✅ $score% ناجح'
+                                                  : score >= 60
+                                                      ? '⚠️ $score% متوسط'
+                                                      : '🔄 $score% أعد المحاولة',
+                                              style: GoogleFonts.cairo(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: score >= 90
+                                                    ? const Color(0xFF2E7D32)
+                                                    : score >= 60
+                                                        ? const Color(0xFFE65100)
+                                                        : Colors.red.shade800,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '(صحيح: $directCorrect • أصلحنا: $correctedCount)',
+                                            style: GoogleFonts.cairo(fontSize: 9, color: Colors.grey.shade600),
+                                          ),
+                                        ],
+                                      )
+                                    else
+                                      Text(
+                                        'لم تختبر بعد',
+                                        style: GoogleFonts.cairo(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade400,
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),

@@ -78,11 +78,20 @@ class QuranPhonetics {
 
     // 4. Minor grammatical ending / prefix match
     if (spokenToken.length >= 3 && normTarget.length >= 3) {
-      if (spokenToken.startsWith(normTarget) || normTarget.startsWith(spokenToken)) {
+      if (spokenToken == normTarget || spokenToken.startsWith(normTarget) || normTarget.startsWith(spokenToken)) {
         return 1;
       }
     }
 
     return 0;
+  }
+
+  /// Checks if spokenToken is a valid prefix of targetWord (user is currently articulating the word)
+  static bool isPrefixOfWord(String targetWord, String spokenToken) {
+    if (spokenToken.isEmpty) return true;
+    final normTarget = Ayah.normalizeArabic(targetWord);
+    final normSpoken = Ayah.normalizeArabic(spokenToken);
+    if (normSpoken.isEmpty) return true;
+    return normTarget.startsWith(normSpoken);
   }
 }

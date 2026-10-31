@@ -17,7 +17,7 @@ class QuranService {
 
     // 2. Check local SharedPreferences cache
     final prefs = await SharedPreferences.getInstance();
-    final cachedData = prefs.getString('cached_surah_$surahNumber');
+    final cachedData = prefs.getString('cached_surah_simple_$surahNumber');
     if (cachedData != null) {
       try {
         final List<dynamic> jsonList = jsonDecode(cachedData);
@@ -29,10 +29,10 @@ class QuranService {
       }
     }
 
-    // 3. Fetch from free Al-Quran Cloud API
+    // 3. Fetch from free Al-Quran Cloud API (quran-simple edition for standard readable Arabic)
     try {
       final response = await http
-          .get(Uri.parse('https://api.alquran.cloud/v1/surah/$surahNumber/quran-uthmani'))
+          .get(Uri.parse('https://api.alquran.cloud/v1/surah/$surahNumber/quran-simple'))
           .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
@@ -53,7 +53,7 @@ class QuranService {
         final cacheJson = jsonEncode(result
             .map((a) => {'number': a.number, 'text': a.text})
             .toList());
-        await prefs.setString('cached_surah_$surahNumber', cacheJson);
+        await prefs.setString('cached_surah_simple_$surahNumber', cacheJson);
 
         return result;
       }

@@ -44,6 +44,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   List<Ayah> _ayahs = [];
   final List<TestWord> _allWords = [];
   int _currentWordIndex = 0;
+  int _lastMatchedTokenIndex = -1;
 
   Timer? _hesitationTimer;
   String? _hintMessage;
@@ -186,6 +187,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       if (!mounted || !_isListening || _currentWordIndex >= _allWords.length) return;
       final nextWord = _allWords[_currentWordIndex];
       setState(() {
+        _errorMessage = null;
         _hintMessage = '⏳ توقفت أكثر من 4 ثوانٍ! الكلمة التالية هي: « ${nextWord.text} »';
       });
     });
@@ -220,7 +222,9 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       listenOptions: stt.SpeechListenOptions(
         localeId: localeId,
         partialResults: true,
-        listenMode: stt.ListenMode.confirmation,
+        listenMode: stt.ListenMode.dictation,
+        pauseFor: const Duration(seconds: 30),
+        listenFor: const Duration(minutes: 30),
         cancelOnError: false,
       ),
       onResult: (result) {
@@ -255,7 +259,15 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
     final normTokens = rawTokens.map((w) => Ayah.normalizeArabic(w)).toList();
 
-    for (int i = 0; i < rawTokens.length; i++) {
+    // If speech engine restarted with fresh recognizedWords
+    if (rawTokens.length <= _lastMatchedTokenIndex) {
+      _lastMatchedTokenIndex = -1;
+    }
+
+    final startIndex = _lastMatchedTokenIndex + 1;
+    if (startIndex >= rawTokens.length) return;
+
+    for (int i = startIndex; i < rawTokens.length; i++) {
       if (_currentWordIndex >= _allWords.length) break;
 
       final normToken = normTokens[i];
@@ -265,13 +277,14 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       final consumed = QuranPhonetics.matchWord(target.text, normTokens, i);
 
       if (consumed > 0) {
-        // Immediate match upon speaking the correct word!
+        // Correct word pronounced! Immediate acceptance and advance
         setState(() {
           target.isRevealed = true;
           _currentWordIndex++;
           _hintMessage = null;
           _errorMessage = null;
         });
+        _lastMatchedTokenIndex = i + (consumed - 1);
         _resetHesitationTimer();
         i += (consumed - 1);
 
@@ -280,10 +293,10 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
           return;
         }
       } else {
-        // Immediate error if the latest spoken word did not match target
+        // Child said a wrong word
         if (i == rawTokens.length - 1 && normToken.length >= 2) {
           setState(() {
-            _errorMessage = '❌ خطأ: نطقتَ « ${rawTokens[i]} » والصواب: « ${target.text} »';
+            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens[i]} »';
             _hintMessage = null;
           });
           _resetHesitationTimer();
@@ -332,6 +345,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
                 Navigator.pop(ctx);
                 setState(() {
                   _currentWordIndex = 0;
+                  _lastMatchedTokenIndex = -1;
                   for (var w in _allWords) {
                     w.isRevealed = false;
                   }
@@ -369,6 +383,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     _stopListening();
     setState(() {
       _currentWordIndex = 0;
+      _lastMatchedTokenIndex = -1;
       for (var w in _allWords) {
         w.isRevealed = false;
       }

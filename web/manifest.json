@@ -1,11 +1,11 @@
 {
-    "name": "quran_kids_app",
-    "short_name": "quran_kids_app",
+    "name": "روضة القرآن الكريم للأطفال",
+    "short_name": "روضة القرآن",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#00897B",
+    "theme_color": "#00897B",
+    "description": "تطبيق تعليم وحفظ القرآن الكريم للأطفال والناشئة.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

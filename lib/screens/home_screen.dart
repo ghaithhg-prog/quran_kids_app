@@ -260,9 +260,27 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Image.asset(
+                      'assets/images/app_icon.png',
+                      width: 85,
+                      height: 85,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'روضة القرآن الكريم للأطفال 📖',
+                  style: GoogleFonts.cairo(fontWeight: FontWeight.bold, fontSize: 15, color: const Color(0xFF00897B)),
+                ),
+                const SizedBox(height: 6),
                 Text(
                   'صُنع هذا التطبيق بحب وإخلاص لوجه الله تعالى لتعليم وتحفيظ أطفالنا كتاب الله الكريم.',
                   style: GoogleFonts.cairo(fontSize: 12, color: Colors.grey.shade700),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 14),
                 _buildDevCard(
@@ -1175,13 +1193,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00897B).withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.asset(
+                        'assets/images/app_icon.png',
+                        width: 34,
+                        height: 34,
+                        fit: BoxFit.contain,
                       ),
-                      child: const Icon(Icons.people_alt, size: 16, color: Color(0xFF00897B)),
                     ),
                     const SizedBox(width: 8),
                     Expanded(

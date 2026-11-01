@@ -1064,7 +1064,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ],
                                       )
                                     else if (hasTested)
-                                      Row(
+                                       Wrap(spacing: 4, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
                                           Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -1093,8 +1093,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
+
+                                           Text(
                                             '(صحيح: $directCorrect • أصلحنا: $correctedCount)',
                                             style: GoogleFonts.cairo(fontSize: 9, color: Colors.grey.shade600),
                                           ),
@@ -1125,7 +1125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(color: Color(0xFFFFA000)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                                 child: Text(
@@ -1161,7 +1161,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF00897B),
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),

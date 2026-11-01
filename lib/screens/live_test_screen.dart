@@ -64,6 +64,15 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   void initState() {
     super.initState();
     _speech = stt.SpeechToText();
+    _audioPlayer.setAudioContext(AudioContext(
+      android: const AudioContextAndroid(
+        isSpeakerphoneOn: true,
+        stayAwake: true,
+        contentType: AndroidContentType.music,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.gain,
+      ),
+    ));
     _initSpeech();
     _loadSurah();
   }
@@ -72,15 +81,17 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     try {
       _speechEnabled = await _speech.initialize(
         onError: (val) {
-          debugPrint('STT Error: $val');
-          if (mounted && _isListening) {
-            _restartListening();
-          }
+          debugPrint('STT Error: ${val.errorMsg}');
         },
         onStatus: (val) {
+          debugPrint('STT Status: $val');
           if (val == 'done' || val == 'notListening') {
             if (mounted && _isListening && _currentWordIndex < _allWords.length) {
-              _restartListening();
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted && _isListening && !_speech.isListening) {
+                  _startListening();
+                }
+              });
             }
           }
         },
@@ -276,20 +287,14 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
         localeId: _speechLocaleId,
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
+        pauseFor: const Duration(seconds: 15),
+        listenFor: const Duration(minutes: 10),
         cancelOnError: false,
       ),
       onResult: (result) {
         _processSpokenText(result.recognizedWords);
       },
     );
-  }
-
-  void _restartListening() async {
-    if (!_isListening || _currentWordIndex >= _allWords.length) return;
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (mounted && _isListening) {
-      _startListening();
-    }
   }
 
   void _stopListening() async {
@@ -572,7 +577,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     final ayah = _ayahs.firstWhere((a) => a.number == targetWord.ayahNumber);
     final url = ayah.getAudioUrl(widget.surah.number, reciter: _selectedReciter);
     try {
-      await _audioPlayer.stop();
+      await _audioPlayer.setVolume(1.0);
       await _audioPlayer.play(UrlSource(url));
     } catch (e) {
       debugPrint('Audio error: $e');

@@ -93,6 +93,16 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
   }
 
   void _setupAudioPlayer() {
+    _audioPlayer.setAudioContext(AudioContext(
+      android: const AudioContextAndroid(
+        isSpeakerphoneOn: true,
+        stayAwake: true,
+        contentType: AndroidContentType.music,
+        usageType: AndroidUsageType.media,
+        audioFocus: AndroidAudioFocus.gain,
+      ),
+    ));
+
     _audioPlayer.onPlayerComplete.listen((_) {
       if (!mounted) return;
       if (_currentPlayingAyahIndex < _ayahs.length - 1) {
@@ -195,7 +205,7 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
     final ayah = _ayahs[index];
     final url = ayah.getAudioUrl(widget.surah.number, reciter: _selectedReciter);
     try {
-      await _audioPlayer.stop();
+      await _audioPlayer.setVolume(1.0);
       await _audioPlayer.play(UrlSource(url));
     } catch (e) {
       debugPrint('Error playing audio: $e');
@@ -251,6 +261,8 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
         localeId: localeId,
+        pauseFor: const Duration(seconds: 12),
+        listenFor: const Duration(minutes: 2),
       ),
       onResult: (result) {
         setState(() {

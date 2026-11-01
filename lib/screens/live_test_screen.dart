@@ -46,7 +46,6 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   List<Ayah> _ayahs = [];
   final List<TestWord> _allWords = [];
   int _currentWordIndex = 0;
-  int _lastMatchedTokenIndex = -1;
   int _directCorrectCount = 0;
   int _correctedCount = 0;
   String _speechLocaleId = 'ar-SA';
@@ -276,8 +275,6 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
         localeId: _speechLocaleId,
         partialResults: true,
         listenMode: stt.ListenMode.dictation,
-        pauseFor: const Duration(seconds: 30),
-        listenFor: const Duration(minutes: 30),
         cancelOnError: false,
       ),
       onResult: (result) {
@@ -312,57 +309,54 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
     final normTokens = rawTokens.map((w) => Ayah.normalizeArabic(w)).toList();
 
-    // If speech engine restarted with fresh recognizedWords
-    if (rawTokens.length <= _lastMatchedTokenIndex) {
-      _lastMatchedTokenIndex = -1;
-    }
+    bool anyAdvanced = false;
+    int tokenIdx = 0;
 
-    final startIndex = _lastMatchedTokenIndex + 1;
-    if (startIndex >= rawTokens.length) return;
-
-    for (int i = startIndex; i < rawTokens.length; i++) {
-      if (_currentWordIndex >= _allWords.length) break;
-
-      final normToken = normTokens[i];
-      if (normToken.isEmpty) continue;
-
+    // Scan through all spoken tokens against target words sequentially
+    while (tokenIdx < normTokens.length && _currentWordIndex < _allWords.length) {
       final target = _allWords[_currentWordIndex];
-      final consumed = QuranPhonetics.matchWord(target.text, normTokens, i);
+      final consumed = QuranPhonetics.matchWord(target.text, normTokens, tokenIdx);
 
       if (consumed > 0) {
-        // Correct word pronounced! Immediate acceptance and advance
-        setState(() {
-          if (!target.neededCorrection) {
-            _directCorrectCount++;
-          } else {
-            _correctedCount++;
-          }
-          target.isRevealed = true;
-          _currentWordIndex++;
-          _hintMessage = null;
-          _errorMessage = null;
-        });
-        _lastMatchedTokenIndex = i + (consumed - 1);
-        _resetHesitationTimer();
-        _scrollToCurrentWordAyah();
-        i += (consumed - 1);
-
-        if (_currentWordIndex >= _allWords.length) {
-          _onTestSuccess();
-          return;
+        // Immediate match!
+        if (!target.neededCorrection) {
+          _directCorrectCount++;
+        } else {
+          _correctedCount++;
         }
+        target.isRevealed = true;
+        _currentWordIndex++;
+        _hintMessage = null;
+        _errorMessage = null;
+        anyAdvanced = true;
+        tokenIdx += consumed;
       } else {
-        // Child said a wrong word - only flag if NOT currently articulating a prefix!
-        if (i == rawTokens.length - 1 && normToken.length >= 2) {
-          final isPrefix = QuranPhonetics.isPrefixOfWord(target.text, normToken);
-          if (!isPrefix) {
-            target.neededCorrection = true;
-            setState(() {
-              _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens[i]} »';
-              _hintMessage = null;
-            });
-            _resetHesitationTimer();
-          }
+        tokenIdx++;
+      }
+    }
+
+    if (anyAdvanced) {
+      setState(() {});
+      _resetHesitationTimer();
+      _scrollToCurrentWordAyah();
+
+      if (_currentWordIndex >= _allWords.length) {
+        _onTestSuccess();
+        return;
+      }
+    } else {
+      // Only show error notice if a full word (length >= 3) was spoken at the end
+      // that is NOT a prefix/articulation of the target word!
+      final lastToken = normTokens.last;
+      if (lastToken.length >= 3) {
+        final target = _allWords[_currentWordIndex];
+        final isPrefix = QuranPhonetics.isPrefixOfWord(target.text, lastToken);
+        if (!isPrefix) {
+          target.neededCorrection = true;
+          setState(() {
+            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens.last} »';
+            _hintMessage = null;
+          });
         }
       }
     }
@@ -537,7 +531,6 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     _lastScrolledAyahNumber = -1;
     setState(() {
       _currentWordIndex = 0;
-      _lastMatchedTokenIndex = -1;
       _directCorrectCount = 0;
       _correctedCount = 0;
       for (var w in _allWords) {

@@ -46,8 +46,28 @@ void main() {
     expect(QuranPhonetics.matchWord('الم', ['الف', 'لام', 'ميم'], 0), equals(3));
     expect(QuranPhonetics.matchWord('الم', ['الفلاميم'], 0), greaterThan(0));
 
-    // Wrong word should NOT match
+    // Lafz Al-Jalalah variations (الله <-> لله)
+    expect(QuranPhonetics.matchWord('الله', ['الله'], 0), greaterThan(0));
+    expect(QuranPhonetics.matchWord('الله', ['لله'], 0), greaterThan(0));
+    expect(QuranPhonetics.matchWord('لله', ['الله'], 0), greaterThan(0));
+    expect(QuranPhonetics.matchWord('لله', ['لله'], 0), greaterThan(0));
+
+    // Compound tokens expansion
+    final expanded = QuranPhonetics.expandCompoundTokens(['الحمدلله', 'رب', 'العالمين']);
+    expect(expanded, equals(['الحمد', 'لله', 'رب', 'العالمين']));
+
+    // Prefix checking (user in middle of articulating word - should NOT match yet!)
+    expect(QuranPhonetics.matchWord('نستعين', ['نست'], 0), equals(0));
+    expect(QuranPhonetics.isPrefixOfWord('نستعين', 'نست'), isTrue);
+    expect(QuranPhonetics.matchWord('المستقيم', ['المس'], 0), equals(0));
+    expect(QuranPhonetics.isPrefixOfWord('المستقيم', 'المس'), isTrue);
+
+    // Exact word match
+    expect(QuranPhonetics.matchWord('نستعين', ['نستعين'], 0), greaterThan(0));
+
+    // Wrong words should NEVER match!
     expect(QuranPhonetics.matchWord('الرحيم', ['الكريم'], 0), equals(0));
+    expect(QuranPhonetics.matchWord('نستعين', ['نستغيث'], 0), equals(0));
     expect(QuranPhonetics.matchWord('الحمد', ['قل'], 0), equals(0));
   });
 }

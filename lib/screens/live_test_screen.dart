@@ -308,10 +308,11 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
     if (rawTokens.isEmpty) return;
 
-    final normTokens = rawTokens.map((w) => Ayah.normalizeArabic(w)).toList();
+    final expandedTokens = QuranPhonetics.expandCompoundTokens(rawTokens);
+    final normTokens = expandedTokens.map((w) => Ayah.normalizeArabic(w)).toList();
 
     // Reset consumed token pointer if speech engine started a new utterance
-    if (rawTokens.length < _consumedTokenCount) {
+    if (expandedTokens.length < _consumedTokenCount) {
       _consumedTokenCount = 0;
     }
 
@@ -356,7 +357,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
         if (spokenNorm.length >= 2) {
           target.neededCorrection = true;
           setState(() {
-            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens[tokenIdx]} »';
+            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${expandedTokens[tokenIdx]} »';
             _hintMessage = null;
           });
           tokenIdx++;
@@ -557,12 +558,12 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       }
       _hintMessage = null;
       _errorMessage = null;
+      _isListening = false;
     });
     if (_scrollController.hasClients) {
       _scrollController.animateTo(0.0, duration: const Duration(milliseconds: 400), curve: Curves.easeOut);
     }
-    _startListening();
-    _showSnack('تمت إعادة الاختبار من البداية. رتّل الآن بصوتك!');
+    _showSnack('تمت إعادة الاختبار من البداية. اضغط على «ابدأ التسميع بصوتك» عند استعدادك!');
   }
 
   Future<void> _playHintAudio() async {

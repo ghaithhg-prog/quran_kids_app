@@ -50,6 +50,7 @@ class QuranPhonetics {
 
   /// Strips leading 'ال' (Al-) or 'ل' if present for root comparison
   static String _stripAl(String w) {
+    if (w == 'الله' || w == 'لله') return w;
     if (w.startsWith('ال') && w.length > 3) {
       return w.substring(2);
     }
@@ -58,6 +59,45 @@ class QuranPhonetics {
       return w.substring(1);
     }
     return w;
+  }
+
+  /// Splits compound speech tokens that are often transcribed together
+  static List<String> expandCompoundTokens(List<String> tokens) {
+    final List<String> expanded = [];
+    for (final token in tokens) {
+      final norm = Ayah.normalizeArabic(token);
+      if (norm == 'الحمدلله' || norm == 'ولحمدلله') {
+        if (norm.startsWith('و')) expanded.add('و');
+        expanded.add('الحمد');
+        expanded.add('لله');
+      } else if (norm == 'بسمالله') {
+        expanded.add('بسم');
+        expanded.add('الله');
+      } else if (norm == 'انشاءالله' || norm == 'انشاالله') {
+        expanded.add('ان');
+        expanded.add('شاء');
+        expanded.add('الله');
+      } else if (norm == 'سبحانالله') {
+        expanded.add('سبحان');
+        expanded.add('الله');
+      } else if (norm == 'ماشاءالله' || norm == 'ماشاالله') {
+        expanded.add('ما');
+        expanded.add('شاء');
+        expanded.add('الله');
+      } else if (norm.startsWith('ياايها') || norm.startsWith('ياأيها')) {
+        expanded.add('يا');
+        expanded.add('ايها');
+      } else if (norm.startsWith('يا') && norm.length > 3 && !norm.startsWith('يوم')) {
+        expanded.add('يا');
+        expanded.add(norm.substring(2));
+      } else if (norm.startsWith('هاانتم') || norm.startsWith('هاأنتم')) {
+        expanded.add('ها');
+        expanded.add('انتم');
+      } else {
+        expanded.add(token);
+      }
+    }
+    return expanded;
   }
 
   /// Checks if target word matches spoken tokens starting at tokenIndex.
@@ -75,6 +115,12 @@ class QuranPhonetics {
 
     // 1.1 Qira'at / Dagger-Alif variations (e.g. مالك <-> ملك)
     if ((normTarget == 'مالك' && spokenToken == 'ملك') || (normTarget == 'ملك' && spokenToken == 'مالك')) {
+      return 1;
+    }
+
+    // 1.2 Lafz Al-Jalalah (الله <-> لله)
+    if ((normTarget == 'الله' && (spokenToken == 'الله' || spokenToken == 'لله')) ||
+        (normTarget == 'لله' && (spokenToken == 'لله' || spokenToken == 'الله'))) {
       return 1;
     }
 
@@ -139,56 +185,12 @@ class QuranPhonetics {
     final sPhoneticNoAl = _phoneticBase(spokenNoAl);
     if (tPhoneticNoAl == sPhoneticNoAl) return 1;
 
-    // 7. Compound tokens (e.g. "الحمدلله" contains "الحمد" and "لله")
-    if (spokenToken.startsWith(normTarget) && spokenToken.length >= normTarget.length) {
+    // 7. Compound / Joined tokens (e.g. "الحمدلله" starts with "الحمد")
+    if (spokenToken.startsWith(normTarget) && spokenToken.length > normTarget.length) {
       return 1;
-    }
-    if (normTarget == 'لله' || normTarget == 'الله') {
-      if (spokenToken.endsWith('لله') || spokenToken.endsWith('الله')) {
-        return 1;
-      }
-    }
-
-    // 8. Grammatical ending / prefix match for words of length >= 3
-    if (spokenToken.length >= 3 && normTarget.length >= 3) {
-      if (spokenToken.startsWith(normTarget) || normTarget.startsWith(spokenToken)) {
-        return 1;
-      }
-      if (spokenNoAl.length >= 3 && targetNoAl.length >= 3) {
-        if (spokenNoAl.startsWith(targetNoAl) || targetNoAl.startsWith(spokenNoAl)) {
-          return 1;
-        }
-      }
-    }
-
-    // 9. Levenshtein fuzzy match for slight mishearings (length >= 4)
-    if (normTarget.length >= 4 && spokenToken.length >= 4) {
-      if (_levenshtein(normTarget, spokenToken) <= 1) return 1;
-      if (_levenshtein(targetNoAl, spokenNoAl) <= 1) return 1;
     }
 
     return 0;
-  }
-
-  static int _levenshtein(String s, String t) {
-    if (s == t) return 0;
-    if (s.isEmpty) return t.length;
-    if (t.isEmpty) return s.length;
-
-    List<int> v0 = List<int>.generate(t.length + 1, (i) => i);
-    List<int> v1 = List<int>.filled(t.length + 1, 0);
-
-    for (int i = 0; i < s.length; i++) {
-      v1[0] = i + 1;
-      for (int j = 0; j < t.length; j++) {
-        final cost = (s[i] == t[j]) ? 0 : 1;
-        v1[j + 1] = [v1[j] + 1, v0[j + 1] + 1, v0[j] + cost].reduce((a, b) => a < b ? a : b);
-      }
-      for (int j = 0; j <= t.length; j++) {
-        v0[j] = v1[j];
-      }
-    }
-    return v1[t.length];
   }
 
   /// Checks if spokenToken is a valid prefix of targetWord (user is currently articulating the word)

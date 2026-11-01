@@ -46,6 +46,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
   List<Ayah> _ayahs = [];
   final List<TestWord> _allWords = [];
   int _currentWordIndex = 0;
+  int _consumedTokenCount = 0;
   int _directCorrectCount = 0;
   int _correctedCount = 0;
   String _speechLocaleId = 'ar-SA';
@@ -309,10 +310,14 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
 
     final normTokens = rawTokens.map((w) => Ayah.normalizeArabic(w)).toList();
 
-    bool anyAdvanced = false;
-    int tokenIdx = 0;
+    // Reset consumed token pointer if speech engine started a new utterance
+    if (rawTokens.length < _consumedTokenCount) {
+      _consumedTokenCount = 0;
+    }
 
-    // Scan through all spoken tokens against target words sequentially
+    bool anyAdvanced = false;
+    int tokenIdx = _consumedTokenCount;
+
     while (tokenIdx < normTokens.length && _currentWordIndex < _allWords.length) {
       final target = _allWords[_currentWordIndex];
       final consumed = QuranPhonetics.matchWord(target.text, normTokens, tokenIdx);
@@ -326,12 +331,39 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
         }
         target.isRevealed = true;
         _currentWordIndex++;
+        tokenIdx += consumed;
+        _consumedTokenCount = tokenIdx;
         _hintMessage = null;
         _errorMessage = null;
         anyAdvanced = true;
-        tokenIdx += consumed;
       } else {
-        tokenIdx++;
+        // Did not match target at tokenIdx.
+        // Check if tokenIdx is a filler/noise token and the NEXT token matches target:
+        if (tokenIdx + 1 < normTokens.length &&
+            QuranPhonetics.matchWord(target.text, normTokens, tokenIdx + 1) > 0) {
+          tokenIdx++;
+          _consumedTokenCount = tokenIdx;
+          continue;
+        }
+
+        // Check if child is in the middle of articulating the target word (prefix)
+        final spokenNorm = normTokens[tokenIdx];
+        if (QuranPhonetics.isPrefixOfWord(target.text, spokenNorm)) {
+          break; // wait for remaining syllables
+        }
+
+        // If the token is a completed wrong word (length >= 2)
+        if (spokenNorm.length >= 2) {
+          target.neededCorrection = true;
+          setState(() {
+            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens[tokenIdx]} »';
+            _hintMessage = null;
+          });
+          tokenIdx++;
+          _consumedTokenCount = tokenIdx;
+        } else {
+          break;
+        }
       }
     }
 
@@ -343,21 +375,6 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       if (_currentWordIndex >= _allWords.length) {
         _onTestSuccess();
         return;
-      }
-    } else {
-      // Only show error notice if a full word (length >= 3) was spoken at the end
-      // that is NOT a prefix/articulation of the target word!
-      final lastToken = normTokens.last;
-      if (lastToken.length >= 3) {
-        final target = _allWords[_currentWordIndex];
-        final isPrefix = QuranPhonetics.isPrefixOfWord(target.text, lastToken);
-        if (!isPrefix) {
-          target.neededCorrection = true;
-          setState(() {
-            _errorMessage = '❌ الكلمة خاطئة: نطقتَ « ${rawTokens.last} »';
-            _hintMessage = null;
-          });
-        }
       }
     }
   }
@@ -531,6 +548,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     _lastScrolledAyahNumber = -1;
     setState(() {
       _currentWordIndex = 0;
+      _consumedTokenCount = 0;
       _directCorrectCount = 0;
       _correctedCount = 0;
       for (var w in _allWords) {

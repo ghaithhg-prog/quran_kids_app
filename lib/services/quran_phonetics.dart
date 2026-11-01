@@ -73,6 +73,11 @@ class QuranPhonetics {
     // 1. Direct text match
     if (normTarget == spokenToken) return 1;
 
+    // 1.1 Qira'at / Dagger-Alif variations (e.g. مالك <-> ملك)
+    if ((normTarget == 'مالك' && spokenToken == 'ملك') || (normTarget == 'ملك' && spokenToken == 'مالك')) {
+      return 1;
+    }
+
     // 2. Muqatta'at (الحروف المقطعة) phonetic comparison
     if (spokenEquivalents.containsKey(normTarget)) {
       final expected = spokenEquivalents[normTarget]!;

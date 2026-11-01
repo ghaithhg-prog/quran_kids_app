@@ -991,8 +991,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             children: [
                               // Number Badge
                               Container(
-                                width: 38,
-                                height: 38,
+                                width: 34,
+                                height: 34,
                                 decoration: BoxDecoration(
                                   color: hasPrize
                                       ? Colors.amber.shade100
@@ -1000,40 +1000,48 @@ class _HomeScreenState extends State<HomeScreen> {
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    '${surah.number}',
-                                    style: GoogleFonts.cairo(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                      color: hasPrize ? const Color(0xFFE65100) : const Color(0xFF00897B),
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      '${surah.number}',
+                                      style: GoogleFonts.cairo(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                        color: hasPrize ? const Color(0xFFE65100) : const Color(0xFF00897B),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
 
                               // Surah Info
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Row(
                                       children: [
-                                        Text(
-                                          'سورة ${surah.name}',
-                                          style: GoogleFonts.amiri(
-                                            fontSize: 19,
-                                            fontWeight: FontWeight.bold,
-                                            color: const Color(0xFF263238),
+                                        Flexible(
+                                          child: Text(
+                                            'سورة ${surah.name}',
+                                            style: GoogleFonts.amiri(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: const Color(0xFF263238),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                           ),
                                         ),
-                                        const SizedBox(width: 6),
+                                        const SizedBox(width: 4),
                                         Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: List.generate(3, (starIdx) {
                                             return Icon(
                                               Icons.star,
-                                              size: 14,
+                                              size: 13,
                                               color: starIdx < stars ? const Color(0xFFFFB300) : Colors.grey.shade300,
                                             );
                                           }),
@@ -1043,31 +1051,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Text(
                                       '${surah.revelationType} • ${surah.totalAyahs} آيات ${savedRound > 1 ? '• مرحلة $savedRound' : ''}',
                                       style: GoogleFonts.cairo(
-                                        fontSize: 11,
+                                        fontSize: 10,
                                         color: Colors.grey.shade600,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
-                                    const SizedBox(height: 3),
+                                    const SizedBox(height: 2),
                                     if (hasPrize)
                                       Row(
                                         children: [
-                                          const Text('🏆', style: TextStyle(fontSize: 12)),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '100% متقن بامتياز (جائزة ذهبية)',
-                                            style: GoogleFonts.cairo(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              color: const Color(0xFFE65100),
+                                          const Text('🏆', style: TextStyle(fontSize: 11)),
+                                          const SizedBox(width: 3),
+                                          Expanded(
+                                            child: Text(
+                                              '100% متقن بامتياز (جائزة ذهبية)',
+                                              style: GoogleFonts.cairo(
+                                                fontSize: 9.5,
+                                                fontWeight: FontWeight.bold,
+                                                color: const Color(0xFFE65100),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
                                             ),
                                           ),
                                         ],
                                       )
                                     else if (hasTested)
-                                       Wrap(spacing: 4, runSpacing: 2, crossAxisAlignment: WrapCrossAlignment.center,
+                                      Wrap(
+                                        spacing: 4,
+                                        runSpacing: 2,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                             decoration: BoxDecoration(
                                               color: score >= 90
                                                   ? const Color(0xFFE8F5E9)
@@ -1083,7 +1100,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                       ? '⚠️ $score% متوسط'
                                                       : '🔄 $score% أعد المحاولة',
                                               style: GoogleFonts.cairo(
-                                                fontSize: 10,
+                                                fontSize: 9.5,
                                                 fontWeight: FontWeight.bold,
                                                 color: score >= 90
                                                     ? const Color(0xFF2E7D32)
@@ -1093,10 +1110,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                               ),
                                             ),
                                           ),
-
-                                           Text(
+                                          Text(
                                             '(صحيح: $directCorrect • أصلحنا: $correctedCount)',
-                                            style: GoogleFonts.cairo(fontSize: 9, color: Colors.grey.shade600),
+                                            style: GoogleFonts.cairo(fontSize: 8.5, color: Colors.grey.shade600),
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       )
@@ -1104,13 +1121,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                       Text(
                                         'لم تختبر بعد',
                                         style: GoogleFonts.cairo(
-                                          fontSize: 10,
+                                          fontSize: 9.5,
                                           color: Colors.grey.shade400,
                                         ),
                                       ),
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 6),
 
                               // Action 1: Memorize Button
                               OutlinedButton(
@@ -1125,8 +1143,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(color: Color(0xFFFFA000)),
-                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
                                 child: Text(
                                   'احفظ',
@@ -1137,7 +1157,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
 
                               // Action 2: Direct Live Test Button
                               ElevatedButton.icon(
@@ -1150,7 +1170,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   );
                                   _loadProgress();
                                 },
-                                icon: const Icon(Icons.mic, size: 14),
+                                icon: const Icon(Icons.mic, size: 13),
                                 label: Text(
                                   'اختبرني',
                                   style: GoogleFonts.cairo(
@@ -1161,8 +1181,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF00897B),
                                   foregroundColor: Colors.white,
-                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                 ),
                               ),
                             ],
@@ -1177,7 +1199,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: _showDevelopersDialog,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border(
@@ -1197,21 +1219,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(8),
                       child: Image.asset(
                         'assets/images/app_icon.png',
-                        width: 34,
-                        height: 34,
+                        width: 30,
+                        height: 30,
                         fit: BoxFit.contain,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'تطوير: محمد غيث قيراط & أنس بن خليل • مجاني 100% بدون إعلانات',
+                            'تطوير: محمد غيث قيراط & أنس بن خليل • مجاني 100%',
                             style: GoogleFonts.cairo(
-                              fontSize: 10.5,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF263238),
                             ),
@@ -1219,9 +1241,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            'Mohamed Ghaith Guirat & Ons Ben Khalil • اضغط للتواصل',
+                            'Mohamed Ghaith Guirat & Ons Ben Khalil',
                             style: GoogleFonts.cairo(
-                              fontSize: 9.5,
+                              fontSize: 9,
                               color: Colors.grey.shade600,
                               fontWeight: FontWeight.w500,
                             ),
@@ -1231,8 +1253,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
                         color: const Color(0xFF00897B).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -1243,13 +1266,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           Text(
                             'المطورون',
                             style: GoogleFonts.cairo(
-                              fontSize: 10,
+                              fontSize: 9.5,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF00897B),
                             ),
                           ),
                           const SizedBox(width: 2),
-                          const Icon(Icons.arrow_forward_ios, size: 9, color: Color(0xFF00897B)),
+                          const Icon(Icons.arrow_forward_ios, size: 8, color: Color(0xFF00897B)),
                         ],
                       ),
                     ),
@@ -1269,7 +1292,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _selectedFilterIndex = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
           decoration: BoxDecoration(
             color: isSelected ? const Color(0xFF00897B) : Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -1278,12 +1301,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           child: Center(
-            child: Text(
-              label,
-              style: GoogleFonts.cairo(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black87,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: GoogleFonts.cairo(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected ? Colors.white : Colors.black87,
+                ),
               ),
             ),
           ),
@@ -1300,28 +1326,43 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color textColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: textColor, size: 18),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: GoogleFonts.cairo(fontSize: 10, color: Colors.grey.shade700)),
-              Text(
-                value,
-                style: GoogleFonts.cairo(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: textColor,
+          Icon(icon, color: textColor, size: 16),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    title,
+                    style: GoogleFonts.cairo(fontSize: 9.5, color: Colors.grey.shade700),
+                  ),
                 ),
-              ),
-            ],
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    value,
+                    style: GoogleFonts.cairo(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

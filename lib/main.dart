@@ -5,6 +5,7 @@ import 'services/progress_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
   await ProgressService.init();
   runApp(const QuranKidsApp());
 }
@@ -24,7 +25,7 @@ class QuranKidsApp extends StatelessWidget {
           primary: const Color(0xFF00897B),
           secondary: const Color(0xFFFF9800),
         ),
-        fontFamily: GoogleFonts.cairo().fontFamily,
+        fontFamily: 'Cairo',
       ),
       home: const HomeScreen(),
     );

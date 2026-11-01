@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:http/http.dart' as http;
 import '../models/surah.dart';
 import '../data/quran_data.dart';
 import '../services/progress_service.dart';
@@ -95,13 +96,24 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
   void _setupAudioPlayer() {
     _audioPlayer.setAudioContext(AudioContext(
       android: const AudioContextAndroid(
-        isSpeakerphoneOn: true,
+        isSpeakerphoneOn: false,
         stayAwake: true,
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
         audioFocus: AndroidAudioFocus.gain,
       ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+        options: const {AVAudioSessionOptions.mixWithOthers},
+      ),
     ));
+
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      if (!mounted) return;
+      setState(() {
+        _isPlaying = state == PlayerState.playing;
+      });
+    });
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (!mounted) return;
@@ -205,10 +217,21 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
     final ayah = _ayahs[index];
     final url = ayah.getAudioUrl(widget.surah.number, reciter: _selectedReciter);
     try {
+      await _audioPlayer.stop();
       await _audioPlayer.setVolume(1.0);
       await _audioPlayer.play(UrlSource(url));
     } catch (e) {
-      debugPrint('Error playing audio: $e');
+      debugPrint('Direct UrlSource error: $e, trying http fallback...');
+      try {
+        final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+        if (res.statusCode == 200) {
+          await _audioPlayer.play(BytesSource(res.bodyBytes));
+        } else {
+          _showSnack('تعذر تشغيل تلاوة الشيخ. تأكد من اتصال هاتفك بالإنترنت.');
+        }
+      } catch (err) {
+        _showSnack('تعذر تشغيل تلاوة الشيخ. تأكد من اتصال هاتفك بالإنترنت.');
+      }
     }
   }
 
@@ -261,6 +284,8 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
     await _speech.listen(
       listenOptions: stt.SpeechListenOptions(
         localeId: localeId,
+        partialResults: true,
+        listenMode: stt.ListenMode.confirmation,
         pauseFor: const Duration(seconds: 12),
         listenFor: const Duration(minutes: 2),
       ),

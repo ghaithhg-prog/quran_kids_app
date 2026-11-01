@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:http/http.dart' as http;
 import '../models/surah.dart';
 import '../data/quran_data.dart';
 import '../services/progress_service.dart';
@@ -66,11 +67,15 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     _speech = stt.SpeechToText();
     _audioPlayer.setAudioContext(AudioContext(
       android: const AudioContextAndroid(
-        isSpeakerphoneOn: true,
+        isSpeakerphoneOn: false,
         stayAwake: true,
         contentType: AndroidContentType.music,
         usageType: AndroidUsageType.media,
         audioFocus: AndroidAudioFocus.gain,
+      ),
+      iOS: AudioContextIOS(
+        category: AVAudioSessionCategory.playback,
+        options: const {AVAudioSessionOptions.mixWithOthers},
       ),
     ));
     _initSpeech();
@@ -82,12 +87,23 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       _speechEnabled = await _speech.initialize(
         onError: (val) {
           debugPrint('STT Error: ${val.errorMsg}');
+          if (mounted) {
+            if (val.errorMsg.contains('network')) {
+              setState(() {
+                _errorMessage = 'تنبيه: محرك الصوت في هاتفك يتطلب الاتصال بالإنترنت.';
+              });
+            } else if (val.errorMsg.contains('permission')) {
+              setState(() {
+                _errorMessage = 'يرجى تفعيل إذن المايكروفون للتطبيق من إعدادات الهاتف.';
+              });
+            }
+          }
         },
         onStatus: (val) {
           debugPrint('STT Status: $val');
           if (val == 'done' || val == 'notListening') {
             if (mounted && _isListening && _currentWordIndex < _allWords.length) {
-              Future.delayed(const Duration(milliseconds: 500), () {
+              Future.delayed(const Duration(milliseconds: 400), () {
                 if (mounted && _isListening && !_speech.isListening) {
                   _startListening();
                 }
@@ -286,7 +302,7 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
       listenOptions: stt.SpeechListenOptions(
         localeId: _speechLocaleId,
         partialResults: true,
-        listenMode: stt.ListenMode.dictation,
+        listenMode: stt.ListenMode.confirmation,
         pauseFor: const Duration(seconds: 15),
         listenFor: const Duration(minutes: 10),
         cancelOnError: false,
@@ -577,10 +593,21 @@ class _LiveTestScreenState extends State<LiveTestScreen> {
     final ayah = _ayahs.firstWhere((a) => a.number == targetWord.ayahNumber);
     final url = ayah.getAudioUrl(widget.surah.number, reciter: _selectedReciter);
     try {
+      await _audioPlayer.stop();
       await _audioPlayer.setVolume(1.0);
       await _audioPlayer.play(UrlSource(url));
     } catch (e) {
-      debugPrint('Audio error: $e');
+      debugPrint('Direct audio error: $e, trying http fallback...');
+      try {
+        final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 8));
+        if (res.statusCode == 200) {
+          await _audioPlayer.play(BytesSource(res.bodyBytes));
+        } else {
+          _showSnack('تعذر تشغيل صوت المساعدة. تأكد من اتصال هاتفك بالإنترنت.');
+        }
+      } catch (err) {
+        _showSnack('تعذر تشغيل صوت المساعدة. تأكد من اتصال هاتفك بالإنترنت.');
+      }
     }
   }
 

@@ -61,6 +61,24 @@ class QuranPhonetics {
     return w;
   }
 
+  /// Normalizes a single letter name in Muqatta'at (e.g. طاء -> طا, اللام -> لام)
+  static String _normLetter(String token) {
+    String t = Ayah.normalizeArabic(token);
+    // Remove trailing hamza (e.g. طاء -> طا, راء -> را, حاء -> حا, هاء -> ها, ياء -> يا)
+    if (t.endsWith('ء') && t.length > 2) {
+      t = t.substring(0, t.length - 1);
+    }
+    // Remove leading 'ال' from letter names (e.g. اللام -> لام, الميم -> ميم, القاف -> قاف, الصاد -> صاد)
+    if (t.startsWith('ال') && t.length >= 4) {
+      t = t.substring(2);
+    }
+    // Normalize Alef variations
+    if (t == 'الاف' || t == 'ألف' || t == 'إلف') {
+      t = 'الف';
+    }
+    return t;
+  }
+
   /// Splits compound speech tokens that are often transcribed together
   static List<String> expandCompoundTokens(List<String> tokens) {
     final List<String> expanded = [];
@@ -127,19 +145,35 @@ class QuranPhonetics {
     // 2. Muqatta'at (الحروف المقطعة) phonetic comparison
     if (spokenEquivalents.containsKey(normTarget)) {
       final expected = spokenEquivalents[normTarget]!;
+
+      // 2.1 Multi-token sequence: e.g. ['الف', 'لام', 'ميم']
       bool fullMatch = true;
+      int matchedCount = 0;
       for (int i = 0; i < expected.length; i++) {
-        if (tokenIndex + i >= spokenTokens.length || spokenTokens[tokenIndex + i] != expected[i]) {
-          fullMatch = false;
-          break;
+        if (tokenIndex + i < spokenTokens.length) {
+          final s = _normLetter(spokenTokens[tokenIndex + i]);
+          final e = _normLetter(expected[i]);
+          if (s == e || s.contains(e) || e.contains(s)) {
+            matchedCount++;
+            continue;
+          }
         }
+        fullMatch = false;
+        break;
       }
-      if (fullMatch) {
+      if (fullMatch && matchedCount == expected.length) {
         return expected.length;
       }
 
-      final joined = expected.join('');
-      if (spokenToken == joined || spokenToken == expected.join(' ') || spokenToken.startsWith('الفلام')) {
+      // 2.2 Joined token: e.g. 'الفلاميم' or 'الفلام ميم'
+      final joined = expected.map(_normLetter).join('');
+      final spokenClean = _normLetter(spokenToken);
+      if (spokenClean == joined || spokenClean == expected.join('') || spokenToken.startsWith('الفلام')) {
+        return 1;
+      }
+
+      // 2.3 Direct letter reading: e.g. 'الم' / 'ألم' / 'طه' / 'يس'
+      if (normTarget == spokenToken || normTarget == spokenClean) {
         return 1;
       }
     }
@@ -199,10 +233,58 @@ class QuranPhonetics {
     final normTarget = Ayah.normalizeArabic(targetWord);
     final normSpoken = Ayah.normalizeArabic(spokenToken);
     if (normSpoken.isEmpty) return true;
+
+    // Check if target is a Muqatta'ah (الحروف المقطعة)
+    if (spokenEquivalents.containsKey(normTarget)) {
+      final expected = spokenEquivalents[normTarget]!;
+      final sNorm = _normLetter(normSpoken);
+      for (final letter in expected) {
+        final lNorm = _normLetter(letter);
+        if (lNorm == sNorm || lNorm.startsWith(sNorm) || sNorm.startsWith(lNorm)) {
+          return true;
+        }
+      }
+      final joined = expected.map(_normLetter).join('');
+      if (joined.startsWith(sNorm) || sNorm.startsWith(joined)) {
+        return true;
+      }
+      if (normTarget.startsWith(normSpoken) || normSpoken.startsWith(normTarget)) {
+        return true;
+      }
+    }
+
     if (normTarget.startsWith(normSpoken)) return true;
 
     final tNoAl = _stripAl(normTarget);
     final sNoAl = _stripAl(normSpoken);
     return tNoAl.startsWith(sNoAl) || normTarget.startsWith(sNoAl);
+  }
+
+  /// Verifies recitation of an entire ayah for memorization screen.
+  /// Returns a list of target words that were missed or incorrect.
+  static List<String> verifyAyahRecitation(List<String> targetWords, List<String> spokenTokens) {
+    final List<String> missed = [];
+    int sIdx = 0;
+
+    for (int t = 0; t < targetWords.length; t++) {
+      final tw = targetWords[t];
+      bool found = false;
+
+      // Scan starting at sIdx
+      for (int i = sIdx; i < spokenTokens.length; i++) {
+        final consumed = matchWord(tw, spokenTokens, i);
+        if (consumed > 0) {
+          found = true;
+          sIdx = i + consumed;
+          break;
+        }
+      }
+
+      if (!found) {
+        missed.add(tw);
+      }
+    }
+
+    return missed;
   }
 }

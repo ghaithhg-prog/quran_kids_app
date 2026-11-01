@@ -7,6 +7,7 @@ import '../models/surah.dart';
 import '../data/quran_data.dart';
 import '../services/progress_service.dart';
 import '../services/quran_service.dart';
+import '../services/quran_phonetics.dart';
 import 'live_test_screen.dart';
 
 class MemorizeScreen extends StatefulWidget {
@@ -274,21 +275,20 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
   void _verifyRecitation(int ayahIndex, String spoken) {
     setState(() => _isListening = false);
     final targetAyah = _ayahs[ayahIndex];
-    final targetNorm = targetAyah.normalizedText;
-    final spokenNorm = Ayah.normalizeArabic(spoken);
+    final targetWords = targetAyah.words;
 
-    final targetWords = targetNorm.split(RegExp(r'\s+'));
-    final spokenWords = spokenNorm.split(RegExp(r'\s+'));
+    final rawSpoken = spoken
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final expandedSpoken = QuranPhonetics.expandCompoundTokens(rawSpoken);
+    final normSpoken = expandedSpoken.map((w) => Ayah.normalizeArabic(w)).toList();
 
-    // Find missing or incorrect words
-    final List<String> missedWords = [];
-    for (final tw in targetWords) {
-      if (!spokenWords.contains(tw)) {
-        missedWords.add(tw);
-      }
-    }
+    // Verify using QuranPhonetics which handles Muqatta'at (e.g. الم -> الف لام ميم),
+    // Qira'at (مالك <-> ملك), Lafz Al-Jalalah (الله <-> لله), and phonetic rules.
+    final missedWords = QuranPhonetics.verifyAyahRecitation(targetWords, normSpoken);
 
-    if (missedWords.isEmpty || spokenWords.length >= targetWords.length - 1 && missedWords.length <= 1) {
+    if (missedWords.isEmpty || (targetWords.length > 3 && missedWords.length <= 1)) {
       // Success!
       setState(() {
         _speechSuccess = true;
@@ -300,9 +300,9 @@ class _MemorizeScreenState extends State<MemorizeScreen> {
       });
     } else {
       // Find the first missing word in original text with diacritics
-      String originalMissed = '';
+      String originalMissed = missedWords.first;
       for (int i = 0; i < targetAyah.words.length; i++) {
-        if (missedWords.contains(Ayah.normalizeArabic(targetAyah.words[i]))) {
+        if (missedWords.contains(targetAyah.words[i])) {
           originalMissed = targetAyah.words[i];
           break;
         }

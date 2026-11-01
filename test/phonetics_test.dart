@@ -42,9 +42,26 @@ void main() {
     expect(QuranPhonetics.matchWord('الضالين', ['الضالين'], 0), greaterThan(0));
     expect(QuranPhonetics.matchWord('الضالين', ['ضالين'], 0), greaterThan(0));
 
-    // Muqatta'at (Alif Lam Meem)
+    // Muqatta'at (Alif Lam Meem & other surah openers)
     expect(QuranPhonetics.matchWord('الم', ['الف', 'لام', 'ميم'], 0), equals(3));
+    expect(QuranPhonetics.matchWord('الم', ['الم'], 0), greaterThan(0));
+    expect(QuranPhonetics.matchWord('الم', ['ألم'], 0), greaterThan(0));
     expect(QuranPhonetics.matchWord('الم', ['الفلاميم'], 0), greaterThan(0));
+    expect(QuranPhonetics.isPrefixOfWord('الم', 'الف'), isTrue);
+    expect(QuranPhonetics.isPrefixOfWord('الم', 'لام'), isTrue);
+    expect(QuranPhonetics.isPrefixOfWord('الم', 'ميم'), isTrue);
+
+    expect(QuranPhonetics.matchWord('طه', ['طا', 'ها'], 0), equals(2));
+    expect(QuranPhonetics.matchWord('طه', ['طاء', 'هاء'], 0), equals(2));
+    expect(QuranPhonetics.matchWord('يس', ['يا', 'سين'], 0), equals(2));
+    expect(QuranPhonetics.matchWord('يس', ['ياء', 'سين'], 0), equals(2));
+    expect(QuranPhonetics.matchWord('كهيعص', ['كاف', 'ها', 'يا', 'عين', 'صاد'], 0), equals(5));
+
+    // Verify Ayah Recitation for MemorizeScreen
+    expect(QuranPhonetics.verifyAyahRecitation(['الم'], ['الف', 'لام', 'ميم']).isEmpty, isTrue);
+    expect(QuranPhonetics.verifyAyahRecitation(['الم'], ['الم']).isEmpty, isTrue);
+    expect(QuranPhonetics.verifyAyahRecitation(['طه'], ['طا', 'ها']).isEmpty, isTrue);
+    expect(QuranPhonetics.verifyAyahRecitation(['يس'], ['يا', 'سين']).isEmpty, isTrue);
 
     // Lafz Al-Jalalah variations (الله <-> لله)
     expect(QuranPhonetics.matchWord('الله', ['الله'], 0), greaterThan(0));
